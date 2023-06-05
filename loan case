@@ -1,0 +1,372 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Bank loan Case Study project"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "application = pd.read_csv('application_data.csv')\n",
+    "application"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "previous = pd.read_csv('previous_application.csv')\n",
+    "summary = previous.describe()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "summary.to_csv(\"summary_previous.csv\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "result = previous.select_dtypes(exclude=['object'])\n",
+    "import seaborn as sns\n",
+    "import matplotlib.pyplot as plt\n",
+    "plt.style.use('seaborn')\n",
+    "for i in result.columns:\n",
+    "    plt.figure(figsize=(6,4))\n",
+    "    sns.boxplot(x=result[i])\n",
+    "    plt.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Now we'll find Zscores of all the resultant values:\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from scipy import stats\n",
+    "\n",
+    "z_scores_previous = stats.zscore(result)\n",
+    "# z_scores\n",
+    "# z_scores.isna().any()  #The following data with True is \n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Following the same procedure for the applications dataset"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "summary1 = application.describe()\n",
+    "summary1.to_csv(\"summary_application.csv\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "result_1 = application.select_dtypes(exclude=['object'])\n",
+    "import seaborn as sns\n",
+    "import matplotlib.pyplot as plt\n",
+    "plt.style.use('seaborn')\n",
+    "for i in result_1.columns:\n",
+    "    plt.figure(figsize=(6,4))\n",
+    "    sns.boxplot(x=result_1[i])\n",
+    "    plt.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Finding Imbalanace in data**"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import imblearn\n",
+    "import pandas as pd\n",
+    "train = pd.read_csv(\"application_data.csv\")\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "train['NAME_CONTRACT_TYPE']"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "train['type_loan']=(train.NAME_CONTRACT_TYPE=='Cash loans').astype(int)\n",
+    "print(train['type_loan'].value_counts())\n",
+    "inactive=len(train[train['type_loan']==1])\n",
+    "active=len(train[train['type_loan']==0])\n",
+    "class_distribution_ratio = active/inactive\n",
+    "print(inactive)\n",
+    "print(active)\n",
+    "print(class_distribution_ratio)\n",
+    "percentage = class_distribution_ratio*100\n",
+    "print(\"percentage\",percentage)\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Therefore the data is imbalanced by 10%"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from collections import Counter\n",
+    "from imblearn.under_sampling import RandomUnderSampler\n",
+    "from sklearn.model_selection import train_test_split\n",
+    "import pandas as pd\n",
+    "import numpy as np\n",
+    "import warnings\n",
+    "warnings.simplefilter(action='ignore', category=FutureWarning)\n",
+    "# Separating the independent variables from dependent variables\n",
+    "X = train.iloc[:,:-1]\n",
+    "y = train.iloc[:,-1]\n",
+    "\n",
+    "#Split train-test data\n",
+    "X_train, X_test, y_train, y_test = train_test_split(X,y,test_size=0.30)\n",
+    "\n",
+    "# summarize class distribution\n",
+    "print(\"Before undersampling: \", Counter(y_train))\n",
+    "\n",
+    "# define undersampling strategy\n",
+    "undersample = RandomUnderSampler(sampling_strategy='majority')\n",
+    "\n",
+    "# fit and apply the transform\n",
+    "X_train_under, y_train_under = undersample.fit_resample(X_train, y_train)\n",
+    "\n",
+    "# summarize class distribution\n",
+    "print(\"After undersampling: \", Counter(y_train_under))\n",
+    "\n",
+    "#PART 2\n",
+    "# import SVM libraries \n",
+    "from sklearn.svm import SVC\n",
+    "from sklearn.metrics import classification_report, roc_auc_score\n",
+    "\n",
+    "model=SVC()\n",
+    "clf_under = model.fit(X_train_under, y_train_under)\n",
+    "pred_under = clf_under.predict(X_test)\n",
+    "\n",
+    "print(\"ROC AUC score for undersampled data: \", roc_auc_score(y_test, pred_under))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "corr1 = pd.read_csv(\"application_data.csv\")\n",
+    "corr2 = pd.read_csv(\"previous_application.csv\")\n",
+    "corr2"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "corr2['type_loan']=(corr2.NAME_CONTRACT_TYPE=='Cash loans').astype(int)\n",
+    "print(corr2['type_loan'].value_counts())\n",
+    "inactive=len(corr2[corr2['type_loan']==0])\n",
+    "active=len(corr2[corr2['type_loan']==1])\n",
+    "class_distribution_ratio = active/inactive\n",
+    "print(inactive)\n",
+    "print(active)\n",
+    "print(class_distribution_ratio)\n",
+    "percentage = class_distribution_ratio*100\n",
+    "print(\"percentage\",percentage)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "import seaborn as sns\n",
+    "import matplotlib.pyplot as plt\n",
+    "from scipy.stats import norm\n",
+    "df = pd.DataFrame().assign(DAYS_FIRST_DRAWING=corr2['DAYS_FIRST_DRAWING'],DAYS_FIRST_DUE=corr2['DAYS_FIRST_DUE'],DAYS_LAST_DUE_1ST_VERSION=corr2['DAYS_LAST_DUE_1ST_VERSION'],DAYS_LAST_DUE=corr2['DAYS_LAST_DUE'],DAYS_TERMINATION=corr2['DAYS_TERMINATION'])\n",
+    "df2=pd.DataFrame().assign(DAYS_FIRST_DUE=corr2['DAYS_FIRST_DUE'],DAYS_LAST_DUE_1ST_VERSION=corr2['DAYS_LAST_DUE_1ST_VERSION'])\n",
+    "df3 = pd.DataFrame().assign(DAYS_LAST_DUE_1ST_VERSION=corr2['DAYS_LAST_DUE_1ST_VERSION'],DAYS_LAST_DUE=corr2['DAYS_LAST_DUE'])\n",
+    "df4=pd.DataFrame().assign(DAYS_FIRST_DUE=corr2['DAYS_FIRST_DUE'],DAYS_LAST_DUE_1ST_VERSION=corr2['DAYS_LAST_DUE_1ST_VERSION'])\n",
+    "df.describe()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "print(\"Correlation Matrix\")\n",
+    "print(df.corr())\n",
+    "print()\n",
+    "\n",
+    "def get_redundant_pairs(df):\n",
+    "    '''Get diagonal and lower triangular pairs of correlation matrix'''\n",
+    "    pairs_to_drop = set()\n",
+    "    cols = df.columns\n",
+    "    for i in range(0, df.shape[1]):\n",
+    "        for j in range(0, i+1):\n",
+    "            pairs_to_drop.add((cols[i], cols[j]))\n",
+    "    return pairs_to_drop\n",
+    "\n",
+    "def get_top_abs_correlations(df, n=5):\n",
+    "    au_corr = df.corr().abs().unstack()\n",
+    "    labels_to_drop = get_redundant_pairs(df)\n",
+    "    au_corr = au_corr.drop(labels=labels_to_drop).sort_values(ascending=False)\n",
+    "    return au_corr[0:n]\n",
+    "\n",
+    "print(\"Top Absolute Correlations\")\n",
+    "print(get_top_abs_correlations(df, 3))\n",
+    "corrmat = df.corr()\n",
+    "f,ax = plt.subplots(figsize=(9,8))\n",
+    "sns.heatmap(corrmat,ax=ax,cmap=\"YlGnBu\",linewidths=0.1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df1=pd.DataFrame().assign(DAYS_BIRTH=corr['DAYS_BIRTH'],DAYS_EMPLOYED=corr['DAYS_EMPLOYED'],DAYS_REGISTRATION=corr['DAYS_REGISTRATION'],DAYS_ID_PUBLISH=corr['DAYS_ID_PUBLISH'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "print(\"Correlation Matrix\")\n",
+    "print(df1.corr())\n",
+    "print()\n",
+    "\n",
+    "def get_redundant_pairs(df1):\n",
+    "    '''Get diagonal and lower triangular pairs of correlation matrix'''\n",
+    "    pairs_to_drop = set()\n",
+    "    cols = df1.columns\n",
+    "    for i in range(0, df1.shape[1]):\n",
+    "        for j in range(0, i+1):\n",
+    "            pairs_to_drop.add((cols[i], cols[j]))\n",
+    "    return pairs_to_drop\n",
+    "\n",
+    "def get_top_abs_correlations(df1, n=5):\n",
+    "    au_corr = df1.corr().abs().unstack()\n",
+    "    labels_to_drop = get_redundant_pairs(df1)\n",
+    "    au_corr = au_corr.drop(labels=labels_to_drop).sort_values(ascending=False)\n",
+    "    return au_corr[0:n]\n",
+    "\n",
+    "print(\"Top Absolute Correlations\")\n",
+    "print(get_top_abs_correlations(df, 3))\n",
+    "corrmat = df1.corr()\n",
+    "f,ax = plt.subplots(figsize=(9,8))\n",
+    "sns.heatmap(corrmat,ax=ax,cmap=\"YlGnBu\",linewidths=0.1)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import pandas as pd\n",
+    "df= pd.read_csv(\"application_data.csv\")"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3.10.4 64-bit",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.10.4"
+  },
+  "orig_nbformat": 4,
+  "vscode": {
+   "interpreter": {
+    "hash": "369f2c481f4da34e4445cda3fffd2e751bd1c4d706f27375911949ba6bb62e1c"
+   }
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
+
